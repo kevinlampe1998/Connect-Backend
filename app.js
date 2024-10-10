@@ -126,24 +126,81 @@ app.post('/chats', async (req, res) => { clear();
             log(savedMessage);
         }
 
-
-
-
-        // if (!searchedChat) {
-        //     const newChat = new Chat({ involved: orderedNames, messages: [] });
-        //     console.log(newChat);
-        //     const savedChat = await newChat.save();
-        //     console.log(savedChat);
-        //     const newMessage = new Message(req.body);
-        //     const savedMessage = await newMessage.save();
-        // }
-
         res.json({ message: 'Your Message is successful saved!' });
         return;
     } catch (err) {
         console.log('Caught Error on POST /chats', err);
         res.json({ message: 'Something went wrong!' }); return;
     }
+});
+
+app.get('/chats/:_id', async (req, res) => { clear();
+    try {
+        const { _id } = req.params;
+
+        if (!_id) { res.json({ message: '_id is missing!' }); return; };
+
+        const searchedChat = await Chat.findOne({ _id })
+            .populate('messages');
+
+        if (!searchedChat) { res.json({ message: 'Chat not found!' }); return; };
+
+        const chat = searchedChat.messages.map(message => message.note);
+    
+        res.json({ message: 'Here is your Chat!', chat, searchedChat });
+        return;
+
+    } catch (err) {
+
+        console.log('Caught Error on GET /chats', err);
+        res.json({ message: 'Something went wrong!' }); return;
+
+    }
+});
+
+app.put('/chats/:_id', async (req, res) => { clear();
+    try {
+        const { _id } = req.params;
+        log(req.body);
+
+        if (!_id) { res.json({ message: '_id is missing!' }); return; };
+
+        const updatedMessage = await Message.updateOne({ _id }, req.body);
+        log(updatedMessage);
+
+        res.json({ message: 'Your message is updated!', updatedMessage });
+        return;
+
+    } catch (err) {
+
+        console.log('Caught Error on PUT /chats', err);
+        res.json({ message: 'Something went wrong!' }); return;
+
+    }
+
+});
+
+app.delete('/chats/:_id', async (req, res) => { clear();
+    try {
+
+        log(req.params._id);
+
+        const { _id } = req.params;
+
+        if (!_id) { res.json({ message: '_id is missing!' }); return; };
+
+        const deletedMessage = await Message.deleteOne({ _id });
+        log(deletedMessage);
+
+        res.json({ message: 'Your message is deleted!' });
+        return;
+
+    } catch (err) {
+
+        console.log('Caught Error on PUT /chats', err);
+        res.json({ message: 'Something went wrong!' }); return;
+
+    }   
 });
 
 app.listen(env.PORT, () => ( clear(),
