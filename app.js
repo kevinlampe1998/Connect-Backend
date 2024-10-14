@@ -8,6 +8,8 @@ import User from './models/user.js';
 import Message from './models/message.js';
 import Chat from './models/chat.js';
 
+import chatRoute from './routes/chatRoute.js';
+
 dotenv.config();
 
 const app = express();
@@ -15,43 +17,45 @@ const env = process.env;
 const log = console.log;
 const clear = console.clear;
 
-mongoose.connect(env.MONGODB_URI).then(() => console.log('MONGO DB connected!'))
-    .catch((err) => console.log('Error connecting MONGO DB!: ', err))
+mongoose.connect(env.MONGODB_URI).then(() => log('MONGO DB connected!'))
+    .catch((err) => log('Error connecting MONGO DB!: ', err))
 
 app.use(cors());
 app.use(express.json());
+
+app.use('/chats', chatRoute);
 
 app.post('/users-register', async (req, res) => { clear();
     try {
 
         const { firstName, lastName, userName, eMail, birthDay, passWord } = req.body;
-        console.log(req.body);
+        log(req.body);
     
         if ( !firstName || !lastName || !userName || !eMail || !birthDay ||
-            !passWord ) { res.json({ message: 'At least One Input is missing!' });
+            !passWord ) { res.status(200).json({ message: 'At least One Input is missing!' });
             return; };
     
         const existUserName = await User.findOne({ userName });
-        console.log(existUserName);
-        if (existUserName) { res.json({ message: 'Username exists already!' });
+        log(existUserName);
+        if (existUserName) { res.status(200).json({ message: 'Username exists already!' });
             return; };
     
         const hash = await bcrypt.hash(passWord, env.SALT);
-        console.log(hash);
+        log(hash);
     
         const newUser = User({ firstName, lastName, userName, eMail,
             birthDay, hash });
-        console.log(newUser);
+        log(newUser);
     
         const savedUser = await newUser.save();
-        console.log(savedUser);
+        log(savedUser);
     
-        res.json({ message: 'You are successful registered!' });
+        res.status(200).json({ message: 'You are successful registered!' });
         return;
 
     } catch (err) {
-        console.log('Caught Error on POST /users-register', err);
-        res.json({ message: 'Something went wrong!' });
+        log('Caught Error on POST /users-register', err);
+        res.status(200).json({ message: 'Something went wrong!' });
         return;
     }
 });
@@ -60,147 +64,30 @@ app.post('/users-login', async (req, res) => { clear();
     try {
 
         const { userName, passWord } = req.body;
-        console.log(userName, passWord);
+        log(userName, passWord);
     
-        if (!userName || !passWord) { res.json({ message:
+        if (!userName || !passWord) { res.status(200).json({ message:
             'Username or Password is missing!' }); return; };
     
         const searchedUser = await User.findOne({ userName });
-        console.log(searchedUser);
+        log(searchedUser);
     
-        if (!searchedUser) { res.json({ message: 'User doesn\'t exist!' });
+        if (!searchedUser) { res.status(200).json({ message: 'User doesn\'t exist!' });
             return; };
 
         const passwordCorrect = await bcrypt.compare(passWord, searchedUser.hash);
-        console.log(passwordCorrect);
-        if (!passwordCorrect) { res.json({ message: 'Password is incorrect!' });
+        log(passwordCorrect);
+        if (!passwordCorrect) { res.status(200).json({ message: 'Password is incorrect!' });
             return; };
     
-        res.json({ message: 'You are successful logged in!' });
+        res.status(200).json({ message: 'You are successful logged in!' });
         return;
         
     } catch (err) {
-        console.log('Caught Error on POST /users-login', err);
-        res.json({ message: 'Something went wrong!' });
+        log('Caught Error on POST /users-login', err);
+        res.status(200).json({ message: 'Something went wrong!' });
         return;
     }
-});
-
-app.post('/chats', async (req, res) => { clear();
-    try {
-        console.log(req.body);
-        const { from, to, note } = req.body;
-        const orderedNames = [from, to].sort().join('&');
-        log(orderedNames);
-
-        const searchedChat = await Chat.findOne({ involved: orderedNames });
-        console.log(searchedChat);
-
-        if (!searchedChat) {
-
-            const newChat = new Chat({ involved: orderedNames,
-            });
-            log(newChat);
-            await newChat.save();
-
-            const newMessage = new Message(req.body);
-            log(newMessage);
-            
-            const updatedChat = await Chat.updateOne({ involved: orderedNames }, { $push: { messages: newMessage } });
-            log(updatedChat);
-            
-            const savedMessage = await newMessage.save();
-
-            log(savedMessage);
-
-        } else {
-
-            const newMessage = new Message(req.body);
-            log(newMessage);
-            
-            const updatedChat = await Chat.updateOne({ involved: orderedNames }, { $push: { messages: newMessage } });
-            log(updatedChat);
-
-            const savedMessage = await newMessage.save();
-
-            log(savedMessage);
-        }
-
-        res.json({ message: 'Your Message is successful saved!' });
-        return;
-    } catch (err) {
-        console.log('Caught Error on POST /chats', err);
-        res.json({ message: 'Something went wrong!' }); return;
-    }
-});
-
-app.get('/chats/:_id', async (req, res) => { clear();
-    try {
-        const { _id } = req.params;
-
-        if (!_id) { res.json({ message: '_id is missing!' }); return; };
-
-        const searchedChat = await Chat.findOne({ _id })
-            .populate('messages');
-
-        if (!searchedChat) { res.json({ message: 'Chat not found!' }); return; };
-
-        const chat = searchedChat.messages.map(message => message.note);
-    
-        res.json({ message: 'Here is your Chat!', chat, searchedChat });
-        return;
-
-    } catch (err) {
-
-        console.log('Caught Error on GET /chats', err);
-        res.json({ message: 'Something went wrong!' }); return;
-
-    }
-});
-
-app.put('/chats/:_id', async (req, res) => { clear();
-    try {
-        const { _id } = req.params;
-        log(req.body);
-
-        if (!_id) { res.json({ message: '_id is missing!' }); return; };
-
-        const updatedMessage = await Message.updateOne({ _id }, req.body);
-        log(updatedMessage);
-
-        res.json({ message: 'Your message is updated!', updatedMessage });
-        return;
-
-    } catch (err) {
-
-        console.log('Caught Error on PUT /chats', err);
-        res.json({ message: 'Something went wrong!' }); return;
-
-    }
-
-});
-
-app.delete('/chats/:_id', async (req, res) => { clear();
-    try {
-
-        log(req.params._id);
-
-        const { _id } = req.params;
-
-        if (!_id) { res.json({ message: '_id is missing!' }); return; };
-
-        const deletedMessage = await Message.deleteOne({ _id });
-        log(deletedMessage);
-
-        res.json({ message: 'Your message is deleted!' });
-        return;
-
-    } catch (err) {
-
-        console.log('Caught Error on PUT /chats', err);
-        res.json({ message: 'Something went wrong!' }); return;
-
-    }   
 });
 
 app.listen(env.PORT, () => ( clear(),
@@ -224,8 +111,9 @@ app.listen(env.PORT, () => ( clear(),
 //     "passWord": "$uperPaßw0rd"
 // }
 
+
 // {
-//     "from": "lampe.kevin",
-//     "to": "super.man",
-//     "note": "Hey Superman, how you are doing?"
+//     "participants": ["670651a8068bd8c4ab78049f", "67070d4a23988e27768e407c"],
+//     "from": "67070d4a23988e27768e407c"
+//     "note": "Hey Superman, how you re doing?" 
 // }
