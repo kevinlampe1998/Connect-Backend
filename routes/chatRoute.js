@@ -30,7 +30,7 @@ router.route('/')
                 log(newChat);
 
                 const savedChat = await newChat.save();
-                log(savedChat);
+                log(savedChat)};
 
                 const newMessage = new Message({ from, note });
                 log(newMessage);
@@ -41,20 +41,6 @@ router.route('/')
                 const updatedChat = await Chat.updateOne({ participants },
                     { $push: { messages: newMessage } });
                 log(updatedChat);
-
-            } else {
-
-                const newMessage = new Message({ from, note });
-                log(newMessage);
-
-                const savedMessage = await newMessage.save();
-                log(savedMessage);
-
-                const updatedChat = await Chat.updateOne({ participants },
-                    { $push: { messages: newMessage } });
-                log(updatedChat);
-
-            }
 
             res.status(200).json({ message: 'Your Message is successful saved!' });
             return;
@@ -140,3 +126,9 @@ router.route('/:_id')
     });
 
 export default router;
+
+// {
+//     "participants": ["670651a8068bd8c4ab78049f", "67070d4a23988e27768e407c"],
+//     "from": "67070d4a23988e27768e407c",
+//     "note": "Hey Superman, how you re doing?" 
+// }
